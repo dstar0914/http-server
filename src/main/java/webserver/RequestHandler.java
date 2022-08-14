@@ -43,10 +43,11 @@ public class RequestHandler extends Thread {
             String[] requestLines = requestLine.split(" ");
             String[] path = requestLines[1].split(QUERYSTRING_SEPARATOR);
             Map<String, String> headers = IOUtils.readLine(br, HEADER_SEPARATOR);
-            Map<String, String> params = getParams(path);
+            Map<String, String> params = getRequestParams(path);
+            Map<String, String> body = getRequestBody(br, headers);
 
             // Set request info.
-            HttpRequest httpRequest = new HttpRequest(HttpMethod.valueOf(requestLines[0]), path[0], headers, params, null);
+            HttpRequest httpRequest = new HttpRequest(HttpMethod.valueOf(requestLines[0]), path[0], headers, params, body);
             log.info("Request info: {}", httpRequest);
 
             // Set Response.
@@ -92,12 +93,28 @@ public class RequestHandler extends Thread {
         }
     }
 
-    private Map<String, String> getParams(String[] path) {
+    private Map<String, String> getRequestParams(String[] path) {
         if (path.length == 1) {
             return null;
         }
 
         return HttpRequestUtils.parseQueryString(path[1]);
+    }
+
+    private Map<String, String> getRequestBody(BufferedReader br, Map<String, String> headers) {
+        if (headers.get("Content-Length") == null) {
+            return null;
+        }
+
+        String body = null;
+        try {
+            body = IOUtils.readData(br, Integer.parseInt(headers.get("Content-Length")));
+
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+
+        return HttpRequestUtils.parseQueryString(body);
     }
 
 }
