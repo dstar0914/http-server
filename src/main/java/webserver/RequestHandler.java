@@ -51,22 +51,47 @@ public class RequestHandler extends Thread {
             log.info("Request info: {}", httpRequest);
 
             // Set Response.
-            responseResource(out, HttpStatus.OK, httpRequest.getUrl());
+            HttpStatus status = HttpStatus.OK;
+            String redirectUrl = null;
+            if (httpRequest.getUrl().equalsIgnoreCase("/user/create")) {
+                status = HttpStatus.FOUND;
+                redirectUrl = "/index.html";
+            }
+
+            responseResource(out, status, httpRequest.getUrl(), redirectUrl);
         } catch (IOException e) {
             log.error(e.getMessage());
         }
     }
 
-    private void responseResource(OutputStream out, HttpStatus status, String url) {
+    private void responseResource(OutputStream out, HttpStatus status, String url, String redirectUrl) {
         DataOutputStream dos = new DataOutputStream(out);
         byte[] body = FileUtils.readBytes(url);
-        response200Header(dos, status, getResponseContentType(url), body.length);
+
+        if (redirectUrl == null) {
+            response200Header(dos, status, getResponseContentType(url), body.length);
+        } else {
+            response302Header(dos, status, redirectUrl, getResponseContentType(url), body.length);
+        }
+
         responseBody(dos, body);
     }
 
     private void response200Header(DataOutputStream dos, HttpStatus status, String contentType, int lengthOfBodyContent) {
         try {
             dos.writeBytes("HTTP/1.1 " + status.getCode() + " " + status.name() + " \r\n");
+            dos.writeBytes("Content-Type: " + contentType + " \r\n");
+            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void response302Header(DataOutputStream dos, HttpStatus status, String redirectUrl, String contentType, int lengthOfBodyContent) {
+        try {
+            dos.writeBytes("HTTP/1.1 " + status.getCode() + " " + status.name() + " \r\n");
+            dos.writeBytes("Location: " + redirectUrl + " \r\n");
             dos.writeBytes("Content-Type: " + contentType + " \r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");

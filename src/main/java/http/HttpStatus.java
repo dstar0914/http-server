@@ -2,7 +2,8 @@ package http;
 
 public enum HttpStatus {
 
-    OK(200);
+    OK(200),
+    FOUND(302);
 
     private int code;
 
