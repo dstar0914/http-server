@@ -6,6 +6,7 @@ import http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.FileUtils;
+import util.HttpRequestUtils;
 import util.IOUtils;
 
 import java.io.*;
@@ -16,7 +17,9 @@ import java.util.Map;
 public class RequestHandler extends Thread {
     private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
 
-    private static String HEADER_SEPARATOR = ":";
+    private final static String HEADER_SEPARATOR = ":";
+
+    private final static String QUERYSTRING_SEPARATOR = "\\?";
 
     private Socket connection;
 
@@ -38,8 +41,12 @@ public class RequestHandler extends Thread {
             }
 
             String[] requestLines = requestLine.split(" ");
+            String[] path = requestLines[1].split(QUERYSTRING_SEPARATOR);
             Map<String, String> headers = IOUtils.readLine(br, HEADER_SEPARATOR);
-            HttpRequest httpRequest = new HttpRequest(HttpMethod.valueOf(requestLines[0]), requestLines[1], headers, null, null);
+            Map<String, String> params = getParams(path);
+
+            // Set request info.
+            HttpRequest httpRequest = new HttpRequest(HttpMethod.valueOf(requestLines[0]), path[0], headers, params, null);
             log.info("Request info: {}", httpRequest);
 
             // Set Response.
@@ -83,6 +90,14 @@ public class RequestHandler extends Thread {
         } else {
             return "text/html;charset=utf-8";
         }
+    }
+
+    private Map<String, String> getParams(String[] path) {
+        if (path.length == 1) {
+            return null;
+        }
+
+        return HttpRequestUtils.parseQueryString(path[1]);
     }
 
 }
